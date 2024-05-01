@@ -1,0 +1,3 @@
+stack ghci 
+
+ stack runghc Kompilator.hs filesTest/typeChecker/bad/same_function_ident.cpp
