@@ -23,6 +23,7 @@ import Data.Maybe
 
 import Util
 import TypeChecker
+import Runner
 
 import AbsGramar  
 import LexGramar   ( Token, mkPosToken )
@@ -45,19 +46,22 @@ runFile f = putStrLn f >> readFile f >>= run
 run:: String -> IO ()
 run content =  
   case (prase content) of
-    Just s -> do
+    (Just s,_) -> do
        putStrLn ("Compile error " ++ s)
-    Nothing -> do
-      putStrLn "Sucsess" 
+    (Nothing, n) -> do
+      putStrLn "Pre run check Sucsessful\n"
+      putStrLn ("program ended with "++(show n)) 
 
-prase :: String -> Err
+prase :: String -> (Err, Maybe Int)
 prase contents = 
   -- putStrLn contents
     case pProgram (myLexer contents) of
     (Right tree) ->
       let (Program pos topDefs) = tree in
-      TypeChecker.typeChecker topDefs
-    (Left err) -> Just err
+      case TypeChecker.typeChecker topDefs of
+        Nothing ->  (Nothing,Just (runer topDefs))
+        err -> (err, Nothing)
+    (Left err) -> (Just err, Nothing)
   --   -- Print handle
   --   -- Nothing
 
