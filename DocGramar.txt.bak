@@ -64,7 +64,6 @@ All other symbols are terminals.
   | //[Stmt]// | -> | **eps**
   |  |  **|**  | //Stmt// //[Stmt]//
   | //Stmt// | -> | ``;``
-  |  |  **|**  | //Block//
   |  |  **|**  | //Type// //Item// ``;``
   |  |  **|**  | //Ident// ``=`` //Expr// ``;``
   |  |  **|**  | ``return`` //Expr// ``;``

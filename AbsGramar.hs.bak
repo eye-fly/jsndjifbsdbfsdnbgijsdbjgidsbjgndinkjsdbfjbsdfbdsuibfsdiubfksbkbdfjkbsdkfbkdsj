@@ -39,7 +39,6 @@ data Block' a = Block a [Stmt' a]
 type Stmt = Stmt' BNFC'Position
 data Stmt' a
     = Empty a
-    | BStmt a (Block' a)
     | Decl a (Type' a) (Item' a)
     | Ass a Ident (Expr' a)
     | Ret a (Expr' a)
@@ -125,7 +124,6 @@ instance HasPosition Block where
 instance HasPosition Stmt where
   hasPosition = \case
     Empty p -> p
-    BStmt p _ -> p
     Decl p _ _ -> p
     Ass p _ _ -> p
     Ret p _ -> p

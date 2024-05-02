@@ -53,10 +53,11 @@ run content =
 prase :: String -> Err
 prase contents = 
   -- putStrLn contents
-  do
-    let (Right tree) = pProgram (myLexer contents)
-    let (Program pos topDefs) = tree 
-    TypeChecker.typeChecker topDefs [] []
+    case pProgram (myLexer contents) of
+    (Right tree) ->
+      let (Program pos topDefs) = tree in
+      TypeChecker.typeChecker topDefs
+    (Left err) -> Just err
   --   -- Print handle
   --   -- Nothing
 

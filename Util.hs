@@ -31,3 +31,12 @@ instance HasIdent AbsGramar.TopDef where
 showPosition mp = case mp of
     Just p -> "at line " ++ show (fst p) ++ ", and column "++ show(snd p)
     Nothing -> ""
+
+(<=>):: AbsGramar.Type -> AbsGramar.Type -> Bool
+(Int _) <=> (Int _) = True
+(Str _) <=> (Str _) = True
+(Bool _) <=> (Bool _) = True
+_ <=> _  = False
+
+(</>):: AbsGramar.Type -> AbsGramar.Type -> Bool
+l </> r = not (l <=> r)

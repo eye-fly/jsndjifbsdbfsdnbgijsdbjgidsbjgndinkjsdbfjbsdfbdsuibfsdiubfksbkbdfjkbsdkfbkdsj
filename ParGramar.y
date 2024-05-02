@@ -109,7 +109,7 @@ Stmt
   | Type Item ';' { (fst $1, AbsGramar.Decl (fst $1) (snd $1) (snd $2)) }
   | Ident '=' Expr ';' { (fst $1, AbsGramar.Ass (fst $1) (snd $1) (snd $3)) }
   | 'return' Expr ';' { (uncurry AbsGramar.BNFC'Position (tokenLineCol $1), AbsGramar.Ret (uncurry AbsGramar.BNFC'Position (tokenLineCol $1)) (snd $2)) }
-  | 'if' '(' Expr ')' Stmt { (uncurry AbsGramar.BNFC'Position (tokenLineCol $1), AbsGramar.Cond (uncurry AbsGramar.BNFC'Position (tokenLineCol $1)) (snd $3) (snd $5)) }
+  | 'if' '(' Expr ')' Block { (uncurry AbsGramar.BNFC'Position (tokenLineCol $1), AbsGramar.Cond (uncurry AbsGramar.BNFC'Position (tokenLineCol $1)) (snd $3) (snd $5)) }
   | 'if' '(' Expr ')' Stmt 'else' Stmt { (uncurry AbsGramar.BNFC'Position (tokenLineCol $1), AbsGramar.CondElse (uncurry AbsGramar.BNFC'Position (tokenLineCol $1)) (snd $3) (snd $5) (snd $7)) }
   | 'while' '(' Expr ')' Stmt { (uncurry AbsGramar.BNFC'Position (tokenLineCol $1), AbsGramar.While (uncurry AbsGramar.BNFC'Position (tokenLineCol $1)) (snd $3) (snd $5)) }
   | 'for' Ident '=' '(' Expr ')' 'to' '(' Expr ')' Stmt { (uncurry AbsGramar.BNFC'Position (tokenLineCol $1), AbsGramar.For (uncurry AbsGramar.BNFC'Position (tokenLineCol $1)) (snd $2) (snd $5) (snd $9) (snd $11)) }

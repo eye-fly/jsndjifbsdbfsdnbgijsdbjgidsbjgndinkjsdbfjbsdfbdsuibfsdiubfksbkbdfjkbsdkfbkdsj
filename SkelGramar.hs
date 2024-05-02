@@ -42,7 +42,7 @@ transStmt x = case x of
   AbsGramar.Decl _ type_ item -> failure x
   AbsGramar.Ass _ ident expr -> failure x
   AbsGramar.Ret _ expr -> failure x
-  AbsGramar.Cond _ expr stmt -> failure x
+  AbsGramar.Cond _ expr block -> failure x
   AbsGramar.CondElse _ expr stmt1 stmt2 -> failure x
   AbsGramar.While _ expr stmt -> failure x
   AbsGramar.For _ ident expr1 expr2 stmt -> failure x

@@ -42,7 +42,7 @@ data Stmt' a
     | Decl a (Type' a) (Item' a)
     | Ass a Ident (Expr' a)
     | Ret a (Expr' a)
-    | Cond a (Expr' a) (Stmt' a)
+    | Cond a (Expr' a) (Block' a)
     | CondElse a (Expr' a) (Stmt' a) (Stmt' a)
     | While a (Expr' a) (Stmt' a)
     | For a Ident (Expr' a) (Expr' a) (Stmt' a)

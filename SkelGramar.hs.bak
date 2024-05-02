@@ -39,7 +39,6 @@ transBlock x = case x of
 transStmt :: Show a => AbsGramar.Stmt' a -> Result
 transStmt x = case x of
   AbsGramar.Empty _ -> failure x
-  AbsGramar.BStmt _ block -> failure x
   AbsGramar.Decl _ type_ item -> failure x
   AbsGramar.Ass _ ident expr -> failure x
   AbsGramar.Ret _ expr -> failure x

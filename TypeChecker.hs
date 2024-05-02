@@ -19,47 +19,24 @@ checkForDuplicates lst st =
 
         _ -> Nothing
 
-typeChecker:: [AbsGramar.TopDef] -> [AbsGramar.TopDef] -> [AbsGramar.TopDef]-> Err
-typeChecker p globVars funcs = 
-    case p of
-        h:t-> case h of 
-            (FnDef _ _ _ _ _) -> typeChecker t (h:globVars) funcs
-            _ -> typeChecker t globVars (h:funcs)
-        [] -> do
-            let err = checkForDuplicates globVars Set.empty in if err == Nothing then
-                checkForDuplicates funcs Set.empty
-            else 
-                err
 -- global local
-data Vars = Vars (Map String AbsGramar.TopDef) (Map String AbsGramar.Stmt ) 
+type Vars = Map String AbsGramar.Type
 
-addLocalVar:: AbsGramar.Ident -> AbsGramar.Type -> Vars -> Vars
-addLocalVar ident tp (Vars globVars localVars) = 
-     Vars globVars (Map.insert (identToString ident) tp localVars)
+-- addLocalVar:: AbsGramar.Ident -> AbsGramar.Type -> Vars -> Vars
+-- addLocalVar ident tp (Vars globVars localVars) = 
+--      Vars globVars (Map.insert (identToString ident) tp localVars)
 
-addGlobalVar:: AbsGramar.Ident -> AbsGramar.Type -> Vars -> Vars
-addGlobalVar ident tp (Vars globVars localVars) = 
-     Vars (Map.insert (identToString ident) tp globVars) localVars
+addVar:: AbsGramar.Ident -> AbsGramar.Type -> Vars -> Vars
+addVar ident tp vars = 
+    Map.insert (identToString ident) tp vars
 
 type Func = AbsGramar.TopDef
 type Funcs = Map String Func
 
-getGVarType:: Maybe AbsGramar.TopDef -> Maybe AbsGramar.Type
-getGVarType (Just (GlobDecl _ typ _)) = Just typ
-getGVarType _ = Nothing
-
-getLVarType:: Maybe AbsGramar.Stmt -> Maybe AbsGramar.Type
-getLVarType (Just (Decl _ typ _)) = Just typ
-getLVarType _ = Nothing
 
 getVar:: AbsGramar.Ident -> Vars -> Maybe AbsGramar.Type
-getVar identT (Vars globVars localVars) =
-    let ident = identToString identT in let local = getLVarType $ Map.lookup ident localVars in
-    if local == Nothing then
-        getGVarType $ Map.lookup ident globVars
-    else
-        local
-        
+getVar ident vars = Map.lookup (identToString ident) vars 
+
 
 getFuncType:: AbsGramar.Ident -> Funcs -> Maybe AbsGramar.Type
 getFuncType ident funcs =
@@ -73,8 +50,8 @@ checkFuncArgsA givenA expectedA pos =  case (givenA,expectedA) of
     ([],[]) -> Nothing
     ([],_) -> Just ("delcared function has more arguments than was given at "++(showPosition pos))
     (_,[]) -> Just ("delcared function has less arguments than was given at "++(showPosition pos))
-    (((Nothing,Just gHt):gT), ((Arg _ eHt _):eT)) -> if gHt/=eHt then
-        Just ("mismach in arguments while calling a function at "++(showPosition pos)) else
+    (((Nothing,Just gHt):gT), ((Arg _ eHt _):eT)) -> if gHt </> eHt then
+        Just ("mismatch in arguments while calling a function at "++(showPosition pos)) else
         checkFuncArgsA gT eT pos
     (((gHe, _):gT), ((Arg _ eHt _):eT)) -> gHe
 
@@ -90,6 +67,12 @@ checkFuncArgs identT givenArgs funcs pos =
 
 
 
+check_two_exp:: AbsGramar.Expr -> AbsGramar.Expr -> Funcs -> Vars -> AbsGramar.BNFC'Position -> (Err, Maybe AbsGramar.Type)
+check_two_exp expr1 expr2 declFunc vars pos = case checkExpresion expr1 declFunc vars of
+    (Nothing, Just ex1T) -> case checkExpresion expr2 declFunc vars of
+        (Nothing, Just ex2T) -> if ex1T <=> ex2T then (Nothing, Just ex1T) else (Just("mismatch of types it "++ (showPosition pos)++"\n got types "++ (show ex1T)++" and "++(show ex2T)),Nothing)
+        (err, _) -> (err, Nothing)
+    (err, _) -> (err, Nothing)
 checkExpresion:: AbsGramar.Expr -> Funcs -> Vars -> (Err, Maybe AbsGramar.Type)
 checkExpresion expr declFunc vars = 
     case expr of
@@ -102,13 +85,76 @@ checkExpresion expr declFunc vars =
         EApp pos fIdent args -> let err = checkFuncArgs fIdent (map (\x -> checkExpresion x declFunc vars) args) declFunc pos in
             if err /= Nothing then (err, Nothing) else
                 (Nothing, getFuncType fIdent declFunc)
+        EString pos _ -> (Nothing, Just (Str pos))
+        Neg pos expr2 -> case checkExpresion expr2 declFunc vars of
+            (Nothing, Just tp) -> if tp </> (Int pos) then (Just ("cannot nagate type that isn't a Int "++(showPosition pos) ),Nothing) else
+                (Nothing, Just tp)
+            (err, _) -> (err,Nothing)
+        Not pos expr2 -> case checkExpresion expr2 declFunc vars of
+            (Nothing, Just tp) -> if tp </> (Bool pos) then (Just ("cannot 'NOT' type that isn't a Bool "++(showPosition pos) ),Nothing) else
+                (Nothing, Just tp)
+            (err, _) -> (err,Nothing)
+        EMul pos ex1 _ ex2 -> case check_two_exp ex1 ex2 declFunc vars pos of
+            (Nothing, Just (Int pos)) -> (Nothing, Just (Int pos))
+            (Nothing, _) -> (Just ("only int can be multiplied "++(showPosition pos) ),Nothing)
+            (err,_)-> (err,Nothing)
+        EAdd pos ex1 _ ex2 -> case check_two_exp ex1 ex2 declFunc vars pos of
+            (Nothing, Just (Int pos)) -> (Nothing, Just (Int pos))
+            (Nothing, _) -> (Just ("only int can be added "++(showPosition pos) ),Nothing)
+            (err,_)-> (err,Nothing)
+        ERel pos ex1 _ ex2 -> check_two_exp ex1 ex2 declFunc vars pos 
+        EAnd pos ex1 ex2 -> case check_two_exp ex1 ex2 declFunc vars pos of
+            (Nothing, Just (Bool pos)) -> (Nothing, Just (Int pos))
+            (Nothing, _) -> (Just ("only boold can be '&&' "++(showPosition pos) ),Nothing)
+            (err,_)-> (err,Nothing)
+        EOr pos ex1 ex2 -> case check_two_exp ex1 ex2 declFunc vars pos of
+            (Nothing, Just (Bool pos)) -> (Nothing, Just (Int pos))
+            (Nothing, _) -> (Just ("only boold can be '||' "++(showPosition pos) ),Nothing)
+            (err,_)-> (err,Nothing)
 
-checkFunction:: [AbsGramar.Stmt] -> Funcs -> Vars -> Err
-checkFunction (funcH:funcT) declFunc vars = 
+
+checkFunction:: [AbsGramar.Stmt] -> AbsGramar.Type -> Funcs -> Vars -> Err
+checkFunction [] declFunc retTyp vars = Nothing
+checkFunction (funcH:funcT) retTyp declFunc vars = 
     case funcH of 
-        Empty _ -> checkFunction funcT vars
-        Decl pos dType (Init _ ident expr) -> let (err,eType) = checkExpresion expr declFunc vars in if err /= Nothing then err else
-            if dType /= eType then Just ("wrong declared variable type at "++ (showPosition pos)) else
-                checkFunction funcT (addLocalVar ident dType vars)
+        Empty _ -> checkFunction funcT retTyp declFunc vars
+        Decl pos dType (Init _ ident expr) -> case checkExpresion expr declFunc vars of
+            (Nothing,Just eType) -> if dType </> eType then Just ("wrong declared variable type at "++ (showPosition pos)++"\n expected "++(show dType)++" but got "++ (show eType)) else
+                checkFunction funcT retTyp declFunc (addVar ident dType vars)
+            (err, _) -> err
+        Ass pos ident expr -> case getVar ident vars of
+            (Nothing) -> Just ("assigment to undaclared variable "++ (showPosition pos))
+            Just tp1 -> case checkExpresion expr declFunc vars of
+                (Nothing, Just tp2) -> if tp1 </> tp2 then Just ("mismatch of a type during assigment at "++ (showPosition pos)++"\n expected "++(show tp1)++" but got "++ (show tp2)) else
+                    checkFunction funcT retTyp declFunc vars
+        Ret pos expr -> case checkExpresion expr declFunc vars of
+            (Nothing, Just tp) -> if tp </> retTyp then Just ("mismatch of a returened type at "++ (showPosition pos)++"\n expected "++(show retTyp)++" but got "++ (show tp)) else
+                checkFunction funcT retTyp declFunc vars
+            (err, _) -> err
+        -- Cond pos bExpr stm -> 
 
-checkFunction [] declFunc vars = Nothing
+
+checkFunctions:: [AbsGramar.TopDef]-> Funcs -> Vars -> Err
+checkFunctions [] _ _ = Nothing
+checkFunctions ((FnDef _ retTyp _ _ (Block _ stmts)):fT) declFunc vars = case checkFunction stmts retTyp declFunc vars of
+    Nothing -> checkFunctions fT declFunc vars
+    err -> err
+
+check:: [AbsGramar.TopDef] -> [AbsGramar.TopDef] -> [AbsGramar.TopDef]-> (Err,[AbsGramar.TopDef],[AbsGramar.TopDef])
+check p globVars funcs =
+    case p of
+        h:t-> case h of 
+            (FnDef _ _ _ _ _) -> check t globVars (h:funcs)
+            _ -> check t (h:globVars) funcs
+        [] -> do
+            let err = checkForDuplicates globVars Set.empty in if err == Nothing then
+                (checkForDuplicates funcs Set.empty, globVars, funcs)
+            else 
+                (err, globVars, funcs)
+
+typeChecker:: [AbsGramar.TopDef] -> Err
+typeChecker p = 
+    case check p [] [] of
+        (Nothing, vars, funcs) -> checkFunctions funcs (foldl (\a x->Map.insert (hasIdent x) x a) Map.empty funcs) (foldl (\a (GlobDecl _ tp (Init _ i _))->Map.insert (identToString i) tp a) Map.empty vars)
+        (err, _, _) -> err
+    
