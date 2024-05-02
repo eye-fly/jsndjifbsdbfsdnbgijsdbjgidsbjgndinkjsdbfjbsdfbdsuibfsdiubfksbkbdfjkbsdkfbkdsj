@@ -43,10 +43,9 @@ data Stmt' a
     | Ass a Ident (Expr' a)
     | Ret a (Expr' a)
     | Cond a (Expr' a) (Block' a)
-    | CondElse a (Expr' a) (Stmt' a) (Stmt' a)
-    | While a (Expr' a) (Stmt' a)
-    | For a Ident (Expr' a) (Expr' a) (Stmt' a)
-    | SExp a (Expr' a)
+    | CondElse a (Expr' a) (Block' a) (Block' a)
+    | While a (Expr' a) (Block' a)
+    | For a Ident (Expr' a) (Expr' a) (Block' a)
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
 type Item = Item' BNFC'Position
@@ -131,7 +130,6 @@ instance HasPosition Stmt where
     CondElse p _ _ _ -> p
     While p _ _ -> p
     For p _ _ _ _ -> p
-    SExp p _ -> p
 
 instance HasPosition Item where
   hasPosition = \case

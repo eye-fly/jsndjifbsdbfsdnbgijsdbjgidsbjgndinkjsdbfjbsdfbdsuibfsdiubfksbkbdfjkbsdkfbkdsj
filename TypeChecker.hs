@@ -99,8 +99,8 @@ checkExpresion expr declFunc vars =
             (Nothing, _) -> (Just ("only int can be multiplied "++(showPosition pos) ),Nothing)
             (err,_)-> (err,Nothing)
         EAdd pos ex1 _ ex2 -> case check_two_exp ex1 ex2 declFunc vars pos of
-            (Nothing, Just (Int pos)) -> (Nothing, Just (Int pos))
-            (Nothing, _) -> (Just ("only int can be added "++(showPosition pos) ),Nothing)
+            (Nothing, Just (Bool pos)) -> (Just ("bool can not be added "++(showPosition pos) ),Nothing)
+            (Nothing, Just tp) -> (Nothing, Just tp)
             (err,_)-> (err,Nothing)
         ERel pos ex1 _ ex2 -> check_two_exp ex1 ex2 declFunc vars pos 
         EAnd pos ex1 ex2 -> case check_two_exp ex1 ex2 declFunc vars pos of
@@ -114,7 +114,7 @@ checkExpresion expr declFunc vars =
 
 
 checkFunction:: [AbsGramar.Stmt] -> AbsGramar.Type -> Funcs -> Vars -> Err
-checkFunction [] declFunc retTyp vars = Nothing
+checkFunction [] _ _ check_two_exp = Nothing
 checkFunction (funcH:funcT) retTyp declFunc vars = 
     case funcH of 
         Empty _ -> checkFunction funcT retTyp declFunc vars
@@ -127,11 +127,38 @@ checkFunction (funcH:funcT) retTyp declFunc vars =
             Just tp1 -> case checkExpresion expr declFunc vars of
                 (Nothing, Just tp2) -> if tp1 </> tp2 then Just ("mismatch of a type during assigment at "++ (showPosition pos)++"\n expected "++(show tp1)++" but got "++ (show tp2)) else
                     checkFunction funcT retTyp declFunc vars
+                (err, _) -> err
         Ret pos expr -> case checkExpresion expr declFunc vars of
             (Nothing, Just tp) -> if tp </> retTyp then Just ("mismatch of a returened type at "++ (showPosition pos)++"\n expected "++(show retTyp)++" but got "++ (show tp)) else
                 checkFunction funcT retTyp declFunc vars
             (err, _) -> err
-        -- Cond pos bExpr stm -> 
+        Cond pos bExpr (Block _ ifStmts) -> case checkExpresion bExpr declFunc vars of
+            (Nothing, Just (Bool _)) -> case checkFunction ifStmts retTyp declFunc vars of
+                Nothing -> checkFunction funcT retTyp declFunc vars
+                err -> err
+            (Nothing, Just tp) -> Just ("in if statment expresion is expected to have bool type at "++(showPosition pos)++ "\n but got "++(show tp) )
+            (err, _) -> err
+        CondElse pos bExpr (Block _ thenStmts) (Block _ elseStmts) -> case checkExpresion bExpr declFunc vars of
+            (Nothing, Just (Bool _)) -> case (checkFunction thenStmts retTyp declFunc vars, checkFunction elseStmts retTyp declFunc vars) of
+                (Nothing,Nothing) -> checkFunction funcT retTyp declFunc vars
+                (Nothing, err) -> err
+                (err,_) -> err
+            (Nothing, Just tp) -> Just ("in if statment expresion is expected to have bool type at "++(showPosition pos)++ "\n but got "++(show tp) )
+            (err, _) -> err
+        While pos bExpr (Block _ whileStmts) -> case checkExpresion bExpr declFunc vars of
+            (Nothing, Just (Bool _)) -> case checkFunction whileStmts retTyp declFunc vars of
+                Nothing -> checkFunction funcT retTyp declFunc vars
+                err -> err
+            (Nothing, Just tp) -> Just ("in while expresion is expected to have bool type at "++(showPosition pos)++ "\n but got "++(show tp) )
+            (err, _) -> err
+        For pos ident b1Expr b2Expr (Block _ forStmts) -> case (checkExpresion b1Expr declFunc vars,checkExpresion b2Expr declFunc vars) of
+            ((Nothing, Just (Int _)), (Nothing, Just (Int _))) -> case checkFunction forStmts retTyp declFunc (addVar ident (Int pos) vars) of
+                Nothing -> checkFunction funcT retTyp declFunc vars
+                err -> err
+            ((Nothing, Just (Int _)), (Nothing, Just tp)) -> Just ("in for expresion is expected to have int type at "++(showPosition $ hasPosition tp)++ "\n but got "++(show tp) )
+            ((Nothing, Just tp),      (Nothing, Just (Int _))) -> Just ("in for expresion is expected to have int type at "++(showPosition $ hasPosition tp)++ "\n but got "++(show tp) )
+            ((Nothing, _),            (err, _)) -> err
+            ((err, _),                _) -> err
 
 
 checkFunctions:: [AbsGramar.TopDef]-> Funcs -> Vars -> Err
@@ -152,9 +179,12 @@ check p globVars funcs =
             else 
                 (err, globVars, funcs)
 
+addFunc:: String -> AbsGramar.Type -> AbsGramar.TopDef
+addFunc sIdent tp = let nPos = BNFC'NoPosition in FnDef nPos (Int nPos) (Ident sIdent) [Arg nPos tp (Ident "arg")] (Block nPos [])
+
 typeChecker:: [AbsGramar.TopDef] -> Err
 typeChecker p = 
-    case check p [] [] of
+    case check p [] [(addFunc "printInt" (Int BNFC'NoPosition)),(addFunc "printString" (Str BNFC'NoPosition))] of
         (Nothing, vars, funcs) -> checkFunctions funcs (foldl (\a x->Map.insert (hasIdent x) x a) Map.empty funcs) (foldl (\a (GlobDecl _ tp (Init _ i _))->Map.insert (identToString i) tp a) Map.empty vars)
         (err, _, _) -> err
     

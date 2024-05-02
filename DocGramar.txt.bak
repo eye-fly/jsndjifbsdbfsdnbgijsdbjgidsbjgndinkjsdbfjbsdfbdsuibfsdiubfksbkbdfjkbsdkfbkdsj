@@ -67,11 +67,11 @@ All other symbols are terminals.
   |  |  **|**  | //Type// //Item// ``;``
   |  |  **|**  | //Ident// ``=`` //Expr// ``;``
   |  |  **|**  | ``return`` //Expr// ``;``
-  |  |  **|**  | ``if`` ``(`` //Expr// ``)`` //Stmt//
-  |  |  **|**  | ``if`` ``(`` //Expr// ``)`` //Stmt// ``else`` //Stmt//
-  |  |  **|**  | ``while`` ``(`` //Expr// ``)`` //Stmt//
-  |  |  **|**  | ``for`` //Ident// ``=`` ``(`` //Expr// ``)`` ``to`` ``(`` //Expr// ``)`` //Stmt//
-  |  |  **|**  | //Expr// ``;``
+  |  |  **|**  | ``if`` ``(`` //Expr// ``)`` //Block//
+  |  |  **|**  | ``if`` ``(`` //Expr// ``)`` //Block// ``else`` //Block//
+  |  |  **|**  | ``while`` ``(`` //Expr// ``)`` //Block//
+  |  |  **|**  | ``for`` //Ident// ``=`` ``(`` //Expr// ``)`` ``to`` ``(`` //Expr// ``)`` //Block//
+  |  |  **|**  | //Block// ``;``
   | //Item// | -> | //Ident// ``=`` //Expr//
   | //[Item]// | -> | //Item//
   |  |  **|**  | //Item// ``,`` //[Item]//

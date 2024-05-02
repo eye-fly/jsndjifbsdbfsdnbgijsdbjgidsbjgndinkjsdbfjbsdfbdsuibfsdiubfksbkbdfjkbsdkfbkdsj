@@ -177,10 +177,9 @@ instance Print (AbsGramar.Stmt' a) where
     AbsGramar.Ass _ id_ expr -> prPrec i 0 (concatD [prt 0 id_, doc (showString "="), prt 0 expr, doc (showString ";")])
     AbsGramar.Ret _ expr -> prPrec i 0 (concatD [doc (showString "return"), prt 0 expr, doc (showString ";")])
     AbsGramar.Cond _ expr block -> prPrec i 0 (concatD [doc (showString "if"), doc (showString "("), prt 0 expr, doc (showString ")"), prt 0 block])
-    AbsGramar.CondElse _ expr stmt1 stmt2 -> prPrec i 0 (concatD [doc (showString "if"), doc (showString "("), prt 0 expr, doc (showString ")"), prt 0 stmt1, doc (showString "else"), prt 0 stmt2])
-    AbsGramar.While _ expr stmt -> prPrec i 0 (concatD [doc (showString "while"), doc (showString "("), prt 0 expr, doc (showString ")"), prt 0 stmt])
-    AbsGramar.For _ id_ expr1 expr2 stmt -> prPrec i 0 (concatD [doc (showString "for"), prt 0 id_, doc (showString "="), doc (showString "("), prt 0 expr1, doc (showString ")"), doc (showString "to"), doc (showString "("), prt 0 expr2, doc (showString ")"), prt 0 stmt])
-    AbsGramar.SExp _ expr -> prPrec i 0 (concatD [prt 0 expr, doc (showString ";")])
+    AbsGramar.CondElse _ expr block1 block2 -> prPrec i 0 (concatD [doc (showString "if"), doc (showString "("), prt 0 expr, doc (showString ")"), prt 0 block1, doc (showString "else"), prt 0 block2])
+    AbsGramar.While _ expr block -> prPrec i 0 (concatD [doc (showString "while"), doc (showString "("), prt 0 expr, doc (showString ")"), prt 0 block])
+    AbsGramar.For _ id_ expr1 expr2 block -> prPrec i 0 (concatD [doc (showString "for"), prt 0 id_, doc (showString "="), doc (showString "("), prt 0 expr1, doc (showString ")"), doc (showString "to"), doc (showString "("), prt 0 expr2, doc (showString ")"), prt 0 block])
 
 instance Print (AbsGramar.Item' a) where
   prt i = \case

@@ -43,10 +43,9 @@ transStmt x = case x of
   AbsGramar.Ass _ ident expr -> failure x
   AbsGramar.Ret _ expr -> failure x
   AbsGramar.Cond _ expr block -> failure x
-  AbsGramar.CondElse _ expr stmt1 stmt2 -> failure x
-  AbsGramar.While _ expr stmt -> failure x
-  AbsGramar.For _ ident expr1 expr2 stmt -> failure x
-  AbsGramar.SExp _ expr -> failure x
+  AbsGramar.CondElse _ expr block1 block2 -> failure x
+  AbsGramar.While _ expr block -> failure x
+  AbsGramar.For _ ident expr1 expr2 block -> failure x
 
 transItem :: Show a => AbsGramar.Item' a -> Result
 transItem x = case x of
