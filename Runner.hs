@@ -7,8 +7,8 @@ import qualified Data.Map as Map
 import AbsGramar  
 import Util
 
-data Env = Env (Map Ident Int) (Map Ident TopDef) 
-type Glob = (Map Ident Int, Map Int String, Int)
+data Env = Env (Map Ident (Int,Type)) (Map Ident TopDef) 
+type Glob = (Map Ident (Int,Type), Map Int String, Int)
 
 getS:: Ord a => Map a b -> a-> b 
 getS mp k =  case Map.lookup k mp of
@@ -16,12 +16,20 @@ getS mp k =  case Map.lookup k mp of
 
 getVar::  Env -> Glob ->Ident -> Int
 getVar (Env vars _) (globv,_,_) ident = case Map.lookup ident vars of
-    (Just v) -> v
-    Nothing -> getS globv ident
+    (Just (v,_)) -> v
+    Nothing ->fst $ getS globv ident
+getVarT::  Env -> Glob ->Ident -> Type
+getVarT (Env vars _) (globv,_,_) ident = case Map.lookup ident vars of
+    (Just (_,t)) -> t
+    Nothing -> snd $ getS globv ident
 
-addVar:: Ident -> Int -> Env -> Env
+addVar:: Ident -> (Int,Type) -> Env -> Env
 addVar ident val (Env vars funvs) =
     (Env (Map.insert ident val vars) funvs)
+
+addGlob:: Ident -> (Int,Type) -> Glob -> Glob
+addGlob ident val (vars, strs, srt_nr) =
+    ((Map.insert ident val vars), strs, srt_nr)
 
 addString:: String -> Glob -> (Int,Glob)
 addString str (globV,strs, newNr) =
@@ -38,6 +46,7 @@ addFun ident val (Env vars funs) =
     (Env vars (Map.insert ident val funs))
 
 mapA::  (a -> b -> (c, a)) -> a -> [b] -> ([c], a)
+mapA _ a [] = ([],a)
 mapA f a (h:t) = let (h2,a2) = f a h in 
     let (t2,a3) = mapA f a2 t in ((h2:t2), a3)
 
@@ -51,7 +60,7 @@ calkExpresion (Str pos) exp env glob = case exp of
         addString (getString x glob ++ (getString x2 glob)) glob
 calkExpresion tp exp env glob = case exp of
     (EVar _ ident) -> (getVar env glob ident,glob)
-    (ELitInt _ x) -> (fromIntegral x,glob)
+    (ELitInt _ x) -> (fromInteger x,glob)
     (ELitTrue _) -> (1,glob)
     (ELitFalse _) -> (0,glob)
     (EApp _ ident exprs) -> let (arg,glob2) = mapA (\a_g exp2 -> calkExpresion tp exp2 env a_g) glob exprs in 
@@ -81,40 +90,74 @@ calkExpresion tp exp env glob = case exp of
             (bToInt $ x+x2 >= 1, glob3)
 
     -- (Int _) -> case exp of
+emtyCode :: [Stmt]
+emtyCode = [Empty BNFC'NoPosition]
+
+whileLoop::  [Stmt] -> [Stmt] -> Expr -> Type -> Env -> Env -> Glob -> (Maybe Int, Env, Glob)
+whileLoop st stRest exp retType env envRest glob = 
+    let (val,glob') = calkExpresion (Bool BNFC'NoPosition) exp env glob in
+        if val == 1 then case  calkStmts st retType env glob' of
+            (Nothing, env', glob'') -> whileLoop st stRest exp retType env' envRest glob'
+            out -> out
+        else calkStmts stRest retType envRest glob'
+
+loop:: [Stmt] -> [Stmt] -> Ident -> Expr -> Type -> Env -> Env -> Glob -> (Maybe Int, Env, Glob)
+loop st stRest ident exp retType env envRest glob = 
+    let (targetVal,glob') = calkExpresion (Int BNFC'NoPosition) exp env glob in
+    let varVal = getVar env glob' ident in
+        if targetVal == varVal then case  calkStmts st retType env glob' of
+            (Nothing, env', glob'') -> loop st stRest ident exp retType (addVar ident (varVal+1, getVarT env' glob ident) env') envRest glob'
+            out -> out
+        else calkStmts stRest retType envRest glob'
+
+runWCondition:: [Stmt] -> [Stmt] ->[Stmt] -> Expr -> Type -> Env -> Glob -> (Maybe Int, Env, Glob)
+runWCondition st1 st2 stRest exp retType env glob = 
+    let (val,glob') = calkExpresion (Bool BNFC'NoPosition) exp env glob in
+        case (if val == 1 then calkStmts st1 else calkStmts st2 ) retType env glob' of
+            (Nothing, _, glob'') -> calkStmts stRest  retType env glob'
+            out -> out
+
+calkStmts:: [Stmt] -> Type -> Env -> Glob -> (Maybe Int, Env,Glob)
+calkStmts [] _ env glob = (Nothing,env,glob)
+calkStmts (stmt:stmts) retType env glob = case stmt of
+    (Empty _) -> calkStmts stmts retType env glob
+    (Decl _ tp (Init _ ident exp) ) -> let (val,glob') =calkExpresion tp exp env glob in
+        calkStmts stmts retType (addVar ident (val,tp) env) glob
+    (Ass _ ident exp ) -> let tp =  getVarT env glob ident in let (val,glob') =calkExpresion tp exp env glob in
+        calkStmts stmts retType (addVar ident (val,tp) env) glob
+    (Ret _ exp) -> let (rt,glob')= calkExpresion retType exp env glob in (Just rt, env, glob')
+    (Cond pos exp (Block _ stmts1)) -> runWCondition stmts1 emtyCode stmts exp retType env glob
+    (CondElse _ exp (Block _ stmts1) (Block _ stmts2) ) -> runWCondition stmts1 stmts2 stmts exp retType env glob
+    (While _ exp (Block _ stmts1) ) -> whileLoop stmts1 stmts exp retType env env glob
+    (For _ ident expS expE (Block _ stmts1) ) -> let (stVal,glob') = calkExpresion (Int BNFC'NoPosition) expS env glob in
+         loop stmts1 stmts ident expE retType (addVar ident (stVal, (Int BNFC'NoPosition)) env) env glob'
+    -- to do for loop <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+calkStmtsDirect:: [Stmt] -> Type -> Env -> Glob -> (Int,Glob)
+calkStmtsDirect stmts retType env glob = case calkStmts stmts retType env glob of
+    (Nothing, _, glob') -> (0, glob')
+    (Just rt, _, glob') -> (rt,glob')
+
 
 fold2l f a [] []    = a
-fold2l f a (x:xs) (y:ys) = let a' = f a x y
-                    in fold2l f a' xs xy
-
-calkStmts:: [Stmt] -> Type -> Env -> Glob -> (Int,Glob)
-calkStmts [] _ _ glob = (0,glob)
-calkStmts (stmt:stmts) retType env glob = case stmt of
-    (Empty _) -> calkStmts calkStmts env glob
-    (Decl _ tp (Init _ Ident exp) ) -> let (val,glob') =calkExpresion tp expr env glob in
-        calkStmts calkStmts (addVar Ident val env) glob
-    (Ass _ Ident exp ) -> let (val,glob') =calkExpresion tp <<<<<<<<<<<<< expr env glob in
-        calkStmts calkStmts (addVar Ident val env) glob
-
+fold2l f a (x:xs) (y:ys) = let a' = f a x y in
+     fold2l f a' xs ys
 calkFunc:: TopDef -> [Int] -> Env -> Glob -> (Int,Glob)
-calkFunc (_ tp _ argIn (Block _ stmts)) argV env glob = (0,glob)
-    let env' = fold2l (\a (Arg _ _ ident) val -> addVar ident val a) env argIn argV in
-        foldl (\a )
+calkFunc (FnDef _ retTp _ argIn (Block _ stmts)) argV env glob = 
+    let env' = fold2l (\a (Arg _ tp ident) val -> addVar ident (val,tp) a) env argIn argV in
+        calkStmtsDirect stmts retTp env' glob
+    -- (0,glob)
 
-(foldl (\a x->Map.insert (hasIdent x) x a) Map.empty funcs)
+-- (foldl (\a x->Map.insert (hasIdent x) x a) Map.empty funcs)
 
-preRun:: [AbsGramar.TopDef] -> Env -> Env
-preRun p env = env
-    -- case p of
-    --     h:t-> case h of 
-    --         (FnDef _ _ _ _ _) -> preRun t globVars (h:funcs)
-    --         _ -> preRun t (h:globVars) funcs
-    --     [] -> do
-    --         let err = checkForDuplicates globVars Set.empty in if err == Nothing then
-    --             (checkForDuplicates funcs Set.empty, globVars, funcs)
-    --         else 
-    --             (err, globVars, funcs)
+preRun:: [AbsGramar.TopDef] -> (Env, Glob) -> (Env,Glob)
+preRun p (env,glob) = 
+    case p of
+        h:t-> case h of 
+            (FnDef _  _ ident _ _) -> preRun t (addFun ident h env ,glob)
+            (GlobDecl _ tp (Init _ ident exp))-> let (val,glob') = calkExpresion tp exp env glob in preRun t (env ,addGlob ident (val,tp) glob)
+        [] -> (env,glob)
 
 runer:: [AbsGramar.TopDef] -> Int
 runer p = 
-    let env = preRun p (Env Map.empty Map.empty) in 
-    0
+    let (env,glob) = preRun p ((Env Map.empty Map.empty),( Map.empty,  Map.empty,0)) in 
+        fst $ calkFunc (getFun env (Ident "main")) [] env glob

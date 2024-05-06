@@ -1,4 +1,6 @@
 int main () {
+    tst = tst * (3+2);
+    return tst;
 }
 
 int tst = 1;

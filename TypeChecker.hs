@@ -102,7 +102,9 @@ checkExpresion expr declFunc vars =
             (Nothing, Just (Bool pos)) -> (Just ("bool can not be added "++(showPosition pos) ),Nothing)
             (Nothing, Just tp) -> (Nothing, Just tp)
             (err,_)-> (err,Nothing)
-        ERel pos ex1 _ ex2 -> check_two_exp ex1 ex2 declFunc vars pos 
+        ERel pos ex1 _ ex2 -> case check_two_exp ex1 ex2 declFunc vars pos of
+            (Nothing, _)-> (Nothing, Just (Bool BNFC'NoPosition))
+            (err,_)-> (err,Nothing)
         EAnd pos ex1 ex2 -> case check_two_exp ex1 ex2 declFunc vars pos of
             (Nothing, Just (Bool pos)) -> (Nothing, Just (Int pos))
             (Nothing, _) -> (Just ("only boold can be '&&' "++(showPosition pos) ),Nothing)
@@ -163,9 +165,9 @@ checkFunction (funcH:funcT) retTyp declFunc vars =
 
 checkFunctions:: [AbsGramar.TopDef]-> Funcs -> Vars -> Err
 checkFunctions [] _ _ = Nothing
-checkFunctions ((FnDef _ retTyp _ _ (Block _ stmts)):fT) declFunc vars = case checkFunction stmts retTyp declFunc vars of
+checkFunctions ((FnDef _ retTyp _ args (Block _ stmts)):fT) declFunc vars = case checkFunction stmts retTyp declFunc (foldl (\a (Arg _ tp ident)->Map.insert (identToString ident) tp a) vars args) of
     Nothing -> checkFunctions fT declFunc vars
-    err -> err
+    err -> err             --(foldl (\a (Arg _ tp ident)->Map.insert (identToString ident) tp a) vars args)
 
 check:: [AbsGramar.TopDef] -> [AbsGramar.TopDef] -> [AbsGramar.TopDef]-> (Err,[AbsGramar.TopDef],[AbsGramar.TopDef])
 check p globVars funcs =

@@ -44,7 +44,9 @@ runFile :: FilePath -> IO ()
 runFile f = putStrLn f >> readFile f >>= run 
 
 run:: String -> IO ()
-run content =  
+run content =  do
+  putStrLn $ show $ pProgram (myLexer content)
+
   case (prase content) of
     (Just s,_) -> do
        putStrLn ("Compile error " ++ s)
@@ -54,7 +56,6 @@ run content =
 
 prase :: String -> (Err, Maybe Int)
 prase contents = 
-  -- putStrLn contents
     case pProgram (myLexer contents) of
     (Right tree) ->
       let (Program pos topDefs) = tree in
