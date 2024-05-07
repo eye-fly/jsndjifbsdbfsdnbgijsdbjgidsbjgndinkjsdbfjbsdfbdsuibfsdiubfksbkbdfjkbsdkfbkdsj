@@ -106,11 +106,11 @@ checkExpresion expr declFunc vars =
             (Nothing, _)-> (Nothing, Just (Bool BNFC'NoPosition))
             (err,_)-> (err,Nothing)
         EAnd pos ex1 ex2 -> case check_two_exp ex1 ex2 declFunc vars pos of
-            (Nothing, Just (Bool pos)) -> (Nothing, Just (Int pos))
+            (Nothing, Just (Bool pos)) -> (Nothing, Just (Bool pos))
             (Nothing, _) -> (Just ("only boold can be '&&' "++(showPosition pos) ),Nothing)
             (err,_)-> (err,Nothing)
         EOr pos ex1 ex2 -> case check_two_exp ex1 ex2 declFunc vars pos of
-            (Nothing, Just (Bool pos)) -> (Nothing, Just (Int pos))
+            (Nothing, Just (Bool pos)) -> (Nothing, Just (Bool pos))
             (Nothing, _) -> (Just ("only boold can be '||' "++(showPosition pos) ),Nothing)
             (err,_)-> (err,Nothing)
 

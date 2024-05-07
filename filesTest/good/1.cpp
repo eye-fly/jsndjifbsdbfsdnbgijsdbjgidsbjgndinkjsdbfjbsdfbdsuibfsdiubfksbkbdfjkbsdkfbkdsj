@@ -1,7 +1,8 @@
 int main () {
   int ret =0;
-  // ret = printInt(fact(7)) ;
-  // ret = printInt(factr(7)) ;
+  ret = printInt(fact(7)) ;
+  ret = printInt(factr(7)) ;
+  ret = printString("testS");
   return fact(7) ;
 }
 
@@ -14,9 +15,6 @@ int fact (int n) {
   while (i < n+1) {
     r = r * i ;
     i = 1+i ;
-    if(i >= n+1){
-      return r;
-    }
   }
   return r ;
 }

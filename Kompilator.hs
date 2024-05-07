@@ -50,11 +50,10 @@ run content =  do
   case (prase content) of
     (Just s,_) -> do
        putStrLn ("Compile error " ++ s)
-    (Nothing, n) -> do
-      putStrLn "Pre run check Sucsessful\n"
-      putStrLn ("program ended with "++(show n)) 
+    (Nothing, Just (ret, io)) -> do
+      (putStrLn "Pre run check Sucsessful\n") >>io >> putStrLn ("program ended with "++(show ret)) 
 
-prase :: String -> (Err, Maybe Int)
+prase :: String -> (Err, Maybe (Int,IO()))
 prase contents = 
     case pProgram (myLexer contents) of
     (Right tree) ->
