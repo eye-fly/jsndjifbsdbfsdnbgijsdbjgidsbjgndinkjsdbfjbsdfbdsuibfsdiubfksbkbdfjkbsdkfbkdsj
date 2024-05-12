@@ -20,23 +20,27 @@ checkForDuplicates lst st =
         _ -> Nothing
 
 -- global local
-type Vars = Map String AbsGramar.Type
+type Vars = Map String (AbsGramar.Type, Bool)
 
 -- addLocalVar:: AbsGramar.Ident -> AbsGramar.Type -> Vars -> Vars
 -- addLocalVar ident tp (Vars globVars localVars) = 
 --      Vars globVars (Map.insert (identToString ident) tp localVars)
 
-addVar:: AbsGramar.Ident -> AbsGramar.Type -> Vars -> Vars
+addVar:: AbsGramar.Ident -> (AbsGramar.Type,Bool) -> Vars -> Vars
 addVar ident tp vars = 
     Map.insert (identToString ident) tp vars
 
+getVar:: AbsGramar.Ident -> Vars -> Maybe AbsGramar.Type
+getVar ident vars = case Map.lookup (identToString ident) vars  of
+    Nothing -> Nothing
+    (Just (tp,_)) -> Just tp
+
+isConst:: AbsGramar.Ident -> Vars -> Bool 
+isConst ident vars = case Map.lookup (identToString ident) vars  of
+    (Just (_,con)) -> con
+
 type Func = AbsGramar.TopDef
 type Funcs = Map String Func
-
-
-getVar:: AbsGramar.Ident -> Vars -> Maybe AbsGramar.Type
-getVar ident vars = Map.lookup (identToString ident) vars 
-
 
 getFuncType:: AbsGramar.Ident -> Funcs -> Maybe AbsGramar.Type
 getFuncType ident funcs =
@@ -122,12 +126,13 @@ checkFunction (funcH:funcT) retTyp declFunc vars =
         Empty _ -> checkFunction funcT retTyp declFunc vars
         Decl pos dType (Init _ ident expr) -> case checkExpresion expr declFunc vars of
             (Nothing,Just eType) -> if dType </> eType then Just ("wrong declared variable type at "++ (showPosition pos)++"\n expected "++(show dType)++" but got "++ (show eType)) else
-                checkFunction funcT retTyp declFunc (addVar ident dType vars)
+                checkFunction funcT retTyp declFunc (addVar ident (dType,False) vars)
             (err, _) -> err
         Ass pos ident expr -> case getVar ident vars of
             (Nothing) -> Just ("assigment to undaclared variable "++ (showPosition pos))
             Just tp1 -> case checkExpresion expr declFunc vars of
                 (Nothing, Just tp2) -> if tp1 </> tp2 then Just ("mismatch of a type during assigment at "++ (showPosition pos)++"\n expected "++(show tp1)++" but got "++ (show tp2)) else
+                     if isConst ident vars then Just ("assigment to constant variable at "++ (showPosition pos)) else
                     checkFunction funcT retTyp declFunc vars
                 (err, _) -> err
         Ret pos expr -> case checkExpresion expr declFunc vars of
@@ -154,7 +159,7 @@ checkFunction (funcH:funcT) retTyp declFunc vars =
             (Nothing, Just tp) -> Just ("in while expresion is expected to have bool type at "++(showPosition pos)++ "\n but got "++(show tp) )
             (err, _) -> err
         For pos ident b1Expr b2Expr (Block _ forStmts) -> case (checkExpresion b1Expr declFunc vars,checkExpresion b2Expr declFunc vars) of
-            ((Nothing, Just (Int _)), (Nothing, Just (Int _))) -> case checkFunction forStmts retTyp declFunc (addVar ident (Int pos) vars) of
+            ((Nothing, Just (Int _)), (Nothing, Just (Int _))) -> case checkFunction forStmts retTyp declFunc (addVar ident ((Int pos),True) vars) of
                 Nothing -> checkFunction funcT retTyp declFunc vars
                 err -> err
             ((Nothing, Just (Int _)), (Nothing, Just tp)) -> Just ("in for expresion is expected to have int type at "++(showPosition $ hasPosition tp)++ "\n but got "++(show tp) )
@@ -165,7 +170,7 @@ checkFunction (funcH:funcT) retTyp declFunc vars =
 
 checkFunctions:: [AbsGramar.TopDef]-> Funcs -> Vars -> Err
 checkFunctions [] _ _ = Nothing
-checkFunctions ((FnDef _ retTyp _ args (Block _ stmts)):fT) declFunc vars = case checkFunction stmts retTyp declFunc (foldl (\a (Arg _ tp ident)->Map.insert (identToString ident) tp a) vars args) of
+checkFunctions ((FnDef _ retTyp _ args (Block _ stmts)):fT) declFunc vars = case checkFunction stmts retTyp declFunc (foldl (\a (Arg _ tp ident)->Map.insert (identToString ident) (tp,False) a) vars args) of
     Nothing -> checkFunctions fT declFunc vars
     err -> err             --(foldl (\a (Arg _ tp ident)->Map.insert (identToString ident) tp a) vars args)
 
@@ -187,6 +192,6 @@ addFunc sIdent tp = let nPos = BNFC'NoPosition in FnDef nPos (Int nPos) (Ident s
 typeChecker:: [AbsGramar.TopDef] -> Err
 typeChecker p = 
     case check p [] [(addFunc "printInt" (Int BNFC'NoPosition)),(addFunc "printString" (Str BNFC'NoPosition))] of
-        (Nothing, vars, funcs) -> checkFunctions funcs (foldl (\a x->Map.insert (hasIdent x) x a) Map.empty funcs) (foldl (\a (GlobDecl _ tp (Init _ i _))->Map.insert (identToString i) tp a) Map.empty vars)
+        (Nothing, vars, funcs) -> checkFunctions funcs (foldl (\a x->Map.insert (hasIdent x) x a) Map.empty funcs) (foldl (\a (GlobDecl _ tp (Init _ i _))->Map.insert (identToString i) (tp,False) a) Map.empty vars)
         (err, _, _) -> err
     

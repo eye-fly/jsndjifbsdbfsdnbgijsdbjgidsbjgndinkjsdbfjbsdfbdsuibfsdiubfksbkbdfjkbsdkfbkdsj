@@ -2,11 +2,9 @@
 
 # Makefile for building the parser and test program.
 
-GHC        = ghc
-HAPPY      = happy
-HAPPY_OPTS = --array --info --ghc --coerce
-ALEX       = alex
-ALEX_OPTS  = --ghc
+# GHC        = ghc
+
+GHC        = stack ghc
 
 # List of goals not corresponding to file names.
 
@@ -14,29 +12,23 @@ ALEX_OPTS  = --ghc
 
 # Default goal.
 
-all : TestGramar
+all : interpreter
 
 # Rules for building the parser.
 
 AbsGramar.hs LexGramar.x ParGramar.y PrintGramar.hs TestGramar.hs : gramar.lte
 	bnfc --haskell --functor gramar.lte
 
-%.hs : %.y
-	${HAPPY} ${HAPPY_OPTS} $<
-
-%.hs : %.x
-	${ALEX} ${ALEX_OPTS} $<
-
-TestGramar : AbsGramar.hs LexGramar.hs ParGramar.hs PrintGramar.hs TestGramar.hs
-	${GHC} ${GHC_OPTS} $@
+interpreter : Kompilator.hs TypeChecker.hs Runner.hs LexGramar.hs ParGramar.hs PrintGramar.hs AbsGramar.hs
+	${GHC} ${GHC_OPTS} Kompilator.hs -o interpreter
 
 # Rules for cleaning generated files.
 
-clean :
-	-rm -f *.hi *.o *.log *.aux *.dvi
+# clean :
+# 	-rm -f *.hi *.o *.log *.aux *.dvi
 
-distclean : clean
-	-rm -f AbsGramar.hs AbsGramar.hs.bak ComposOp.hs ComposOp.hs.bak DocGramar.txt DocGramar.txt.bak ErrM.hs ErrM.hs.bak LayoutGramar.hs LayoutGramar.hs.bak LexGramar.x LexGramar.x.bak ParGramar.y ParGramar.y.bak PrintGramar.hs PrintGramar.hs.bak SkelGramar.hs SkelGramar.hs.bak TestGramar.hs TestGramar.hs.bak XMLGramar.hs XMLGramar.hs.bak ASTGramar.agda ASTGramar.agda.bak ParserGramar.agda ParserGramar.agda.bak IOLib.agda IOLib.agda.bak Main.agda Main.agda.bak gramar.dtd gramar.dtd.bak TestGramar LexGramar.hs ParGramar.hs ParGramar.info ParDataGramar.hs Makefile
+# distclean : clean
+#	 -rm -f AbsGramar.hs AbsGramar.hs.bak ComposOp.hs ComposOp.hs.bak DocGramar.txt DocGramar.txt.bak ErrM.hs ErrM.hs.bak LayoutGramar.hs LayoutGramar.hs.bak LexGramar.x LexGramar.x.bak ParGramar.y ParGramar.y.bak PrintGramar.hs PrintGramar.hs.bak SkelGramar.hs SkelGramar.hs.bak TestGramar.hs TestGramar.hs.bak XMLGramar.hs XMLGramar.hs.bak ASTGramar.agda ASTGramar.agda.bak ParserGramar.agda ParserGramar.agda.bak IOLib.agda IOLib.agda.bak Main.agda Main.agda.bak gramar.dtd gramar.dtd.bak TestGramar LexGramar.hs ParGramar.hs ParGramar.info ParDataGramar.hs Makefile
 
 
 # EOF

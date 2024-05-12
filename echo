@@ -1,0 +1,5 @@
+filesTest/bad/10-1-div_by_0.cpp
+Right (Program (Just (1,1)) [FnDef (Just (1,1)) (Int (Just (1,1))) (Ident "main") [] (Block (Just (1,13)) [Decl (Just (2,5)) (Int (Just (2,5))) (Init (Just (2,9)) (Ident "tst") (ELitInt (Just (2,15)) 10)),Ass (Just (3,5)) (Ident "tst") (EMul (Just (3,11)) (EVar (Just (3,11)) (Ident "tst")) (Div (Just (3,15))) (ELitInt (Just (3,18)) 0)),Ret (Just (4,5)) (EVar (Just (4,12)) (Ident "tst"))])])
+Pre run check Sucsessful
+
+program ended with -1

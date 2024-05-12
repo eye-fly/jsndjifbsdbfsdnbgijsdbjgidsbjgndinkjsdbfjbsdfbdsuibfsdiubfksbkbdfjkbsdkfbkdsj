@@ -45,11 +45,11 @@ runFile f = putStrLn f >> readFile f >>= run
 
 run:: String -> IO ()
 run content =  do
-  putStrLn $ show $ pProgram (myLexer content)
+  -- putStrLn $ show $ pProgram (myLexer content)
 
   case (prase content) of
     (Just s,_) -> do
-       putStrLn ("Compile error " ++ s)
+       hPutStrLn  stderr ("Compile error " ++ s)
     (Nothing, Just (ret, io)) -> do
       (putStrLn "Pre run check Sucsessful\n") >>io >> putStrLn ("program ended with "++(show ret)) 
 
